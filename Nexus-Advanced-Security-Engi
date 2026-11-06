@@ -1,0 +1,236 @@
+nexus_advanced_security_engine.py
+import os
+import sys
+import time
+import socket
+import struct
+import json
+import random
+import threading
+import queue
+import logging
+from logging.handlers import RotatingFileHandler
+
+# ======================================================================
+# 1. ARCHITECTURE CONFIGURATION & TELEMETRY ENGINE
+# ======================================================================
+HONEYPOT_PORT = 8080
+THREAD_LIMIT = 50
+TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+TELEGRAM_CHAT_ID = "YOUR_CHAT_ID_HERE"
+
+# Automated Log Rotation Setup (Strict 10MB Threshold to prevent disk crashes)
+log_formatter = logging.Formatter('%(asctime)s - [%(levelname)s] - %(message)s')
+
+suite_handler = RotatingFileHandler('security_toolkit_audit.log', maxBytes=10*1024*1024, backupCount=5)
+suite_handler.setFormatter(log_formatter)
+logger = logging.getLogger('SecuritySuite')
+logger.setLevel(logging.INFO)
+logger.addHandler(suite_handler)
+
+honeypot_handler = RotatingFileHandler('honeypot_deception_audit.log', maxBytes=10*1024*1024, backupCount=5)
+honeypot_handler.setFormatter(log_formatter)
+hp_logger = logging.getLogger('HoneypotEngine')
+hp_logger.setLevel(logging.INFO)
+hp_logger.addHandler(honeypot_handler)
+
+# Verify optional core ecosystem libraries safely
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    from cryptography.fernet import Fernet
+    DEPENDENCIES_AVAILABLE = True
+except ImportError:
+    DEPENDENCIES_AVAILABLE = False
+
+# ======================================================================
+# 2. CORE UTILITY INFRASTRUCTURE
+# ======================================================================
+
+def send_telegram_alert(message):
+    """Broadcasts dynamic security alert payloads straight to your phone"""
+    if TELEGRAM_BOT_TOKEN == "YOUR_BOT_TOKEN_HERE" or TELEGRAM_CHAT_ID == "YOUR_CHAT_ID_HERE":
+        return False
+    try:
+        url = f"https://telegram.org{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": f"🛡️ [NEXUS ENGINE ALERT]: {message}"}
+        requests.post(url, json=payload, timeout=5)
+        return True
+    except:
+        return False
+
+def run_port_scanner():
+    """Vector 1: High-Velocity Multi-threaded Network Reconnaissance"""
+    target = input("[?] Enter target host IP/Domain (e.g., scanme.nmap.org): ").strip()
+    if not target: return
+    
+    print(f"\n[*] Launching asynchronous scanning threads on: {target} | Pool: {THREAD_LIMIT}")
+    task_queue = queue.Queue()
+    open_ports = []
+    
+    for p in range(1, 501): task_queue.put(p)
+    
+    def worker():
+        while not task_queue.empty():
+            port = task_queue.get()
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(0.5)
+                if s.connect_ex((target, port)) == 0:
+                    open_ports.append(port)
+                s.close()
+            except:
+                pass
+            task_queue.task_done()
+
+    threads = []
+    for _ in range(THREAD_LIMIT):
+        t = threading.Thread(target=worker)
+        threads.append(t)
+        t.start()
+        
+    for t in threads: t.join()
+    
+    print("\n" + "="*45 + "\n           SCAN COMPLETION REPORT\n" + "="*45)
+    if open_ports:
+        for p in sorted(open_ports):
+            print(f"[!] Target Port {p}: OPEN (Vulnerability Flagged)")
+            logger.info(f"Port Scanner identified exposed port {p} on host {target}")
+    else:
+        print("[+] Isolation clear. No open common ports discovered.")
+    logger.info(f"Reconnaissance sweep completed for host {target}")
+
+def run_web_scanner():
+    """Vector 2: Web Entry-Point Vulnerability Scraper"""
+    if not DEPENDENCIES_AVAILABLE:
+        print("[!] Sync environment libraries before running this module."); return
+    url = input("[?] Enter target application URL (e.g., https://httpbin.org): ").strip()
+    if not url: return
+    
+    try:
+        print(f"\n[*] Scraping structural input frames from: {url}")
+        res = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
+        soup = BeautifulSoup(res.content, "html.parser")
+        forms = soup.find_all("form")
+        print(f"[+] Discovered {len(forms)} HTML interaction form targets.")
+        
+        for i, form in enumerate(forms, 1):
+            action = form.attrs.get("action", "")
+            method = form.attrs.get("method", "get")
+            print(f" -> Form Target #{i} | Route: {action} | Protocol: {method.upper()}")
+            for tag in form.find_all("input"):
+                print(f"    - Parameter Field: {tag.attrs.get('name')} | Mode: {tag.attrs.get('type', 'text')}")
+        logger.info(f"Web structure tracking executed successfully on: {url}")
+    except Exception as e:
+        print(f"[!] Exploitation scanning dropped: {e}")
+
+def run_brute_forcer():
+    """Vector 3: Automated Authentication Audit Engine"""
+    if not DEPENDENCIES_AVAILABLE:
+        print("[!] Sync environment libraries before running this module."); return
+    url = input("[?] Enter target application login endpoint: ").strip()
+    username = input("[?] Enter target username parameter: ").strip()
+    if not url or not username: return
+    
+    passwords = ["123456", "password123", "admin", "secret2026", "cybersecurity"]
+    print(f"\n[*] Evaluating credential matrix layers for target identity: {username}")
+    
+    for pwd in passwords:
+        payload = {'username': username, 'password': pwd}
+        try:
+            time.sleep(0.1) # Micro-delay anti-rate limiting verification bypass
+            response = requests.post(url, data=payload, timeout=5)
+            if "authenticated" in response.text.lower() or response.status_code == 200:
+                print(f"[ EXPLOIT VERIFIED ] -> Identity: {username} | Ciphertext Match: {pwd}")
+                logger.info(f"Authentication audit matched credentials for profile: {username}")
+                return
+        except:
+            pass
+    print("[-] Verification database list exhausted. Audit routine terminated.")
+
+def run_file_crypto():
+    """Vector 4: Symmetric Cryptographic Protection Shield"""
+    if not DEPENDENCIES_AVAILABLE:
+        print("[!] Sync environment libraries before running this module."); return
+    
+    key_path = "secret.key"
+    if not os.path.exists(key_path):
+        key = Fernet.generate_key()
+        with open(key_path, "wb") as kf: kf.write(key)
+    else:
+        key = open(key_path, "rb").read()
+        
+    f_engine = Fernet(key)
+    target_file = input("[?] Enter local target document name (e.g., file.txt): ").strip()
+    if not os.path.exists(target_file):
+        print("[!] Target storage file path cannot be resolved!"); return
+        
+    action = input("[?] Select masking state (encrypt / decrypt): ").strip().lower()
+    with open(target_file, "rb") as target: raw_data = target.read()
+    
+    if action == "encrypt":
+        encrypted = f_engine.encrypt(raw_data)
+        with open(target_file, "wb") as target: target.write(encrypted)
+        print(f"[+] Target Document '{target_file}' completely locked down using AES-256.")
+    elif action == "decrypt":
+        try:
+            decrypted = f_engine.decrypt(raw_data)
+            with open(target_file, "wb") as target: target.write(decrypted)
+            print(f"[+] Target Document '{target_file}' successfully decrypted to plain text.")
+        except:
+            print("[!] Decryption denied: Absolute key signature mismatch or modified buffer structure.")
+
+def run_packet_sniffer():
+    """Vector 5: Low-Level Network Parameter Protocol Inspector"""
+    print("\n[*] Binding raw network socket structures... (Press Ctrl+C to disconnect)")
+    
+    try:
+        if os.name == 'nt':
+            s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+            s.bind(("0.0.0.0", 0))
+            s.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
+            s.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+        else:
+            s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
+    except PermissionError:
+        print("\n[!] CRITICAL PRIVILEGE ERROR: This operational module requires Admin/Root Terminal authorization!"); return
+
+    try:
+        for _ in range(3):
+            raw_data, _ = s.recvfrom(65535)
+            ip_header = struct.unpack('!BBHHHBBH4s4s', raw_data[:20])
+            ttl = ip_header[5]
+            proto = ip_header[6]
+            src = socket.inet_ntoa(ip_header[8])
+            dst = socket.inet_ntoa(ip_header[9])
+            print(f" -> [Live Packet Capture] {src} -> {dst} | TTL Range: {ttl} | Protocol Flag: {proto}")
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if os.name == 'nt': s.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
+
+class PolymorphicHoneypot(http.server.BaseHTTPRequestHandler):
+    def log_message(self, format, *args): pass
+    def do_GET(self):
+        hp_logger.info(f"Reconnaissance anomaly trapped from client IP: {self.client_address} on route {self.path}")
+        send_telegram_alert(f"Honeypot hit by external bot client: {self.client_address}")
+        
+        self.send_response(200)
+        self.send_header("Server", "Apache/2.4.41 Nexus-Advanced-Security-Engine-Polymorphic-Daemon/v1.0")
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        
+        fake_data = {
+            "status": "authenticated_node",
+            "entropy_token": random.randint(1000, 99999),
+            "next_validation_hop": f"/route_node_{random.randint(1,100)}/secure"
+        }
+        time.sleep(0.3) # Strategic network delay injection to hold bot sockets open
+        self.wfile.write(json.dumps(fake_data).encode())
+
+def start_honeypot_daemon():
+    """Vector 6: Polymorphic Adversarial Threat Trap Platform"""
+    import http.server
+    import socketserver
+    socketserver.TCPServer.allow_reuse_address = True
+    try:
